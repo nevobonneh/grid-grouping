@@ -7,13 +7,58 @@ import {
   GridEvents,
   GridRowGroupingModel,
   useGridApiRef,
-  LicenseInfo
+  LicenseInfo,
+  GridRenderCellParams
 } from '@mui/x-data-grid-pro';
-import { Chip, Stack } from '@mui/material';
+import { Box, Checkbox, Chip, Stack } from '@mui/material';
+import CircleIcon from '@mui/icons-material/Circle';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
 
 const INITIAL_GROUPING_COLUMN_MODEL = [''];
 
 LicenseInfo.setLicenseKey('6239d8e4e4e446a3d208d638ff7603bdT1JERVI6Um9tLVRlc3QsRVhQSVJZPTIyMjMwNjEyMDAwMDAsS0VZVkVSU0lPTj0x')
+
+const CustomCheckBox = (props: any) => {
+  const { checked, onChange } = props;
+  return (
+    <Checkbox
+      icon={<CircleOutlinedIcon fontSize="inherit" />}
+      checkedIcon={<CircleIcon fontSize="inherit" />}
+      checked={checked}
+      onChange={onChange}
+    />
+  )
+}
+const renderCheckBox = (params: GridRenderCellParams<boolean>) => {
+  return <CustomCheckBox checked={params.value} />;
+}
+
+function CheckBoxEditInputCell(props: GridRenderCellParams<boolean>) {
+  const { id, value, api, field } = props;
+
+  const handleChange = async (event: any) => {
+    api.setEditCellValue({ id, field, value: Boolean(event.target.checked) }, event);
+    if (event.nativeEvent.clientX !== 0 && event.nativeEvent.clientY !== 0) {
+      const isValid = await api.commitCellChange({ id, field });
+      if (isValid) {
+        api.setCellMode(id, field, 'view');
+      }
+    }
+  };
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', pr: 2 }}>
+      <CustomCheckBox
+        checked={value}
+        onChange={handleChange}
+      />
+    </Box>
+  );
+}
+
+function renderCheckBoxEditInputCell(params: any) {
+  return <CheckBoxEditInputCell {...params} />;
+}
 
 const rows: any = [
   { id: 1, col1: true, col2: true, col3: true },
@@ -27,7 +72,14 @@ const rows: any = [
 ];
 
 const columns: GridColumns = [
-  { field: 'col1', headerName: 'Column 1', width: 150, type: 'boolean' },
+  {
+    field: 'col1',
+    headerName: 'Column 1',
+    width: 150, type: 'boolean',
+    renderCell: renderCheckBox,
+    renderEditCell: renderCheckBoxEditInputCell,
+    editable: true
+  },
   { field: 'col2', headerName: 'Column 2', width: 150, type: 'boolean' },
   { field: 'col3', headerName: 'Column 3', width: 150, type: 'boolean' },
 ];
@@ -65,7 +117,7 @@ const useKeepGroupingColumnsHidden = (
       columns.map((colDef: { field: string; }) =>
         initialModel.includes(colDef.field) ||
           (leafField && colDef.field === leafField)
-          ? { ...colDef, hide: false }
+          ? { ...colDef, hide: false, groupable: false }
           : colDef,
       ),
     [columns, initialModel, leafField],
